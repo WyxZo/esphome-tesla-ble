@@ -7,5 +7,5 @@ esp32:
   framework:
     components:
       - name: tesla-ble
-        source: https://github.com/yoziru/tesla-ble.git
-        ref: v5.2.0
+        source: https://github.com/WyxZo/tesla-ble.git
+        ref: front-seat-climate
