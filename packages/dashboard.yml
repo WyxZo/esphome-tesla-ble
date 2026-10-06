@@ -2,7 +2,7 @@
 # ESPHome Device Builder owns those settings in each device's local configuration.
 substitutions:
   # Set by the Device Builder configuration to a branch, tag, or commit SHA.
-  tesla_ble_ref: main
+  tesla_ble_ref: front-seat-climate
   vcsec_poll_interval: "10"
   infotainment_poll_interval_awake: "30"
   infotainment_poll_interval_active: "10"
