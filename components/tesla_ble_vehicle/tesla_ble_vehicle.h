@@ -22,6 +22,7 @@
 
 #include "ble_adapter_impl.h"
 #include "control_state_policy.h"
+#include "comfort_climate_policy.h"
 #include "polling_policy.h"
 #include "connection_reset_policy.h"
 #include "storage_adapter_impl.h"
@@ -173,6 +174,14 @@ public:
     uint16_t get_write_handle() const { return write_handle_; }
 
 private:
+    ComfortClimatePolicy comfort_climate_policy_;
+    void start_climate_for_comfort_();
+    void cancel_comfort_climate_();
+    void cancel_comfort_climate_timers_();
+    void handle_comfort_climate_state_(bool on);
+    void apply_steering_wheel_heat_(bool enable);
+    void apply_front_seat_climate_mode_(size_t index);
+
     // Initialization helpers
     void initialize_managers();
     void configure_pending_sensors();
