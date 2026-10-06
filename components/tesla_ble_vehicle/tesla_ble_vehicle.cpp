@@ -147,6 +147,8 @@ void TeslaBLEVehicle::configure_pending_sensors() {
     state_manager_->set_charging_amps_number(pending_charging_amps_number_);
   if (pending_charging_limit_number_)
     state_manager_->set_charging_limit_number(pending_charging_limit_number_);
+  if (pending_front_seat_climate_select_)
+    state_manager_->set_front_seat_climate_select(pending_front_seat_climate_select_);
   if (pending_doors_lock_)
     state_manager_->set_doors_lock(pending_doors_lock_);
   if (pending_charge_port_latch_lock_)
@@ -391,6 +393,12 @@ void TeslaBLEVehicle::set_charging_limit_number(number::Number *number) {
   pending_charging_limit_number_ = number;
   if (state_manager_)
     state_manager_->set_charging_limit_number(number);
+}
+
+void TeslaBLEVehicle::set_front_seat_climate_select(select::Select *select) {
+  pending_front_seat_climate_select_ = select;
+  if (state_manager_)
+    state_manager_->set_front_seat_climate_select(select);
 }
 
 // =============================================================================
@@ -886,6 +894,73 @@ void TeslaBLEVehicle::set_steering_wheel_heat(bool enable) {
         schedule_state_refresh_(decision.refresh);
       });
 }
+
+void TeslaBLEVehicle::set_front_seat_climate_mode(size_t index) {
+  static constexpr const char *MODE_NAMES[] = {
+      "Off", "Heat 1", "Heat 2", "Heat 3", "Cool 1", "Cool 2", "Cool 3",
+  };
+
+  if (index >= (sizeof(MODE_NAMES) / sizeof(MODE_NAMES[0]))) {
+    ESP_LOGW(TAG, "Invalid front seat climate mode index: %u", static_cast<unsigned>(index));
+    return;
+  }
+
+  ESP_LOGI(TAG, "Front seat climate %s requested", MODE_NAMES[index]);
+
+  int32_t heater_level = 0;
+  int32_t cooler_level = 0;
+  if (index >= 1 && index <= 3) {
+    heater_level = static_cast<int32_t>(index);
+  } else if (index >= 4 && index <= 6) {
+    cooler_level = static_cast<int32_t>(index - 3);
+  }
+
+  if (heater_level > 0) {
+    send_command_with_tracking(
+        UniversalMessage_Domain_DOMAIN_INFOTAINMENT, "Front Seat Cool Off",
+        [](TeslaBLE::Client *client, uint8_t *buff, size_t *len) {
+          int32_t off = 0;
+          return client->build_car_server_vehicle_action_message(
+              buff, len, CarServer_VehicleAction_hvacSeatCoolerActions_tag, &off);
+        });
+    send_command_with_tracking(
+        UniversalMessage_Domain_DOMAIN_INFOTAINMENT, "Front Seat Heat",
+        [heater_level](TeslaBLE::Client *client, uint8_t *buff, size_t *len) {
+          return client->build_car_server_vehicle_action_message(
+              buff, len, CarServer_VehicleAction_hvacSeatHeaterActions_tag, &heater_level);
+        });
+  } else if (cooler_level > 0) {
+    send_command_with_tracking(
+        UniversalMessage_Domain_DOMAIN_INFOTAINMENT, "Front Seat Heat Off",
+        [](TeslaBLE::Client *client, uint8_t *buff, size_t *len) {
+          int32_t off = 0;
+          return client->build_car_server_vehicle_action_message(
+              buff, len, CarServer_VehicleAction_hvacSeatHeaterActions_tag, &off);
+        });
+    send_command_with_tracking(
+        UniversalMessage_Domain_DOMAIN_INFOTAINMENT, "Front Seat Cool",
+        [cooler_level](TeslaBLE::Client *client, uint8_t *buff, size_t *len) {
+          return client->build_car_server_vehicle_action_message(
+              buff, len, CarServer_VehicleAction_hvacSeatCoolerActions_tag, &cooler_level);
+        });
+  } else {
+    send_command_with_tracking(
+        UniversalMessage_Domain_DOMAIN_INFOTAINMENT, "Front Seat Heat Off",
+        [](TeslaBLE::Client *client, uint8_t *buff, size_t *len) {
+          int32_t off = 0;
+          return client->build_car_server_vehicle_action_message(
+              buff, len, CarServer_VehicleAction_hvacSeatHeaterActions_tag, &off);
+        });
+    send_command_with_tracking(
+        UniversalMessage_Domain_DOMAIN_INFOTAINMENT, "Front Seat Cool Off",
+        [](TeslaBLE::Client *client, uint8_t *buff, size_t *len) {
+          int32_t off = 0;
+          return client->build_car_server_vehicle_action_message(
+              buff, len, CarServer_VehicleAction_hvacSeatCoolerActions_tag, &off);
+        });
+  }
+}
+
 
 // =============================================================================
 // Vehicle controls (Infotainment)
