@@ -1,6 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import ble_client, binary_sensor, button, switch, number, sensor, text_sensor, lock, cover, climate
+from esphome.components import ble_client, binary_sensor, button, switch, number, sensor, text_sensor, lock, cover, climate, select
 from esphome.const import (
     CONF_ACCURACY_DECIMALS,
     CONF_DEVICE_CLASS,
@@ -20,7 +20,7 @@ from esphome import automation
 
 CODEOWNERS = ["@yoziru"]
 DEPENDENCIES = ["ble_client"]
-AUTO_LOAD = ["binary_sensor", "button", "switch", "number", "sensor", "text_sensor", "lock", "cover", "climate"]
+AUTO_LOAD = ["binary_sensor", "button", "switch", "number", "sensor", "text_sensor", "lock", "cover", "climate", "select"]
 
 tesla_ble_vehicle_ns = cg.esphome_ns.namespace("tesla_ble_vehicle")
 TeslaBLEVehicle = tesla_ble_vehicle_ns.class_(
@@ -58,6 +58,9 @@ TeslaClimate = tesla_ble_vehicle_ns.class_("TeslaClimate", climate.Climate)
 # Custom number classes
 TeslaChargingAmpsNumber = tesla_ble_vehicle_ns.class_("TeslaChargingAmpsNumber", number.Number)
 TeslaChargingLimitNumber = tesla_ble_vehicle_ns.class_("TeslaChargingLimitNumber", number.Number)
+
+# Combined front-seat climate control
+TeslaFrontSeatClimateSelect = tesla_ble_vehicle_ns.class_("TeslaFrontSeatClimateSelect", select.Select)
 
 # Actions
 WakeAction = tesla_ble_vehicle_ns.class_("WakeAction", automation.Action)
@@ -210,6 +213,17 @@ CLIMATE = {
     "setter": "set_climate",
 }
 
+SELECTS = [
+    {
+        "id": "front_seat_climate",
+        "name": "Front Seats",
+        "class": TeslaFrontSeatClimateSelect,
+        "setter": "set_front_seat_climate_select",
+        "icon": "mdi:car-seat-heater",
+        "options": ["Off", "Heat 1", "Heat 2", "Heat 3", "Cool 1", "Cool 2", "Cool 3"],
+    },
+]
+
 NUMBERS = [
     {
         "id": "charging_amps",
@@ -346,6 +360,13 @@ async def create_switch(var, definition):
     return _attach(var, await switch.new_switch(config), definition)
 
 
+async def create_select(var, definition):
+    """Create a select and register with TeslaBLEVehicle."""
+    sel_config = _base_config(definition, definition["class"], "select")
+    sel = await select.new_select(sel_config, options=definition["options"])
+    return _attach(var, sel, definition)
+
+
 async def create_number(var, definition, config):
     """Create a number and register with TeslaBLEVehicle."""
     max_val = definition["max"]
@@ -427,6 +448,7 @@ async def to_code(config):
         (SWITCHES, create_switch),
         (LOCKS, create_lock),
         (COVERS, create_cover),
+        (SELECTS, create_select),
     ):
         for definition in creators[0]:
             await creators[1](var, definition)
