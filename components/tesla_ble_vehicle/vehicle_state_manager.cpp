@@ -418,6 +418,25 @@ void VehicleStateManager::update_climate_state(const CarServer_ClimateState& cli
         climate_on_ = climate_state.optional_is_climate_on.is_climate_on;
     }
     
+    // Front seat heating/cooling - expose one combined state only when both front seats agree.
+    int heater_left = -1;
+    int heater_right = -1;
+    int cooler_left = -1;
+    int cooler_right = -1;
+    if (climate_state.which_optional_seat_heater_left) {
+        heater_left = climate_state.optional_seat_heater_left.seat_heater_left;
+    }
+    if (climate_state.which_optional_seat_heater_right) {
+        heater_right = climate_state.optional_seat_heater_right.seat_heater_right;
+    }
+    if (climate_state.which_optional_seat_fan_front_left) {
+        cooler_left = climate_state.optional_seat_fan_front_left.seat_fan_front_left;
+    }
+    if (climate_state.which_optional_seat_fan_front_right) {
+        cooler_right = climate_state.optional_seat_fan_front_right.seat_fan_front_right;
+    }
+    update_front_seat_climate_state(heater_left, heater_right, cooler_left, cooler_right);
+
     // Steering wheel heater - sync switch state from vehicle
     if (climate_state.which_optional_steering_wheel_heater && steering_wheel_heat_switch_ != nullptr) {
         const bool heater_on = climate_state.optional_steering_wheel_heater.steering_wheel_heater;
@@ -624,6 +643,33 @@ void VehicleStateManager::update_steering_wheel_heat(bool enabled) {
 void VehicleStateManager::update_sentry_mode(bool enabled) {
     publish_sensor_state(sentry_mode_switch_, enabled);
 }
+
+void VehicleStateManager::update_front_seat_climate_state(int heater_left, int heater_right,
+                                                          int cooler_left, int cooler_right) {
+    if (front_seat_climate_select_ == nullptr) {
+        return;
+    }
+
+    const bool heaters_match = heater_left >= 0 && heater_left == heater_right;
+    const bool coolers_match = cooler_left >= 0 && cooler_left == cooler_right;
+
+    if (coolers_match && cooler_left > 0) {
+        const int level = std::min(cooler_left, 3);
+        front_seat_climate_select_->publish_state(static_cast<size_t>(3 + level));
+        return;
+    }
+
+    if (heaters_match && heater_left > 0) {
+        const int level = std::min(heater_left, 3);
+        front_seat_climate_select_->publish_state(static_cast<size_t>(level));
+        return;
+    }
+
+    if (heaters_match && coolers_match && heater_left == 0 && cooler_left == 0) {
+        front_seat_climate_select_->publish_state(static_cast<size_t>(0));
+    }
+}
+
 
 void VehicleStateManager::republish_charging_amps() {
     if (charging_amps_number_ != nullptr && charging_amps_number_->has_state()) {

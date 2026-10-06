@@ -9,6 +9,7 @@
 #include <esphome/components/lock/lock.h>
 #include <esphome/components/cover/cover.h>
 #include <esphome/components/climate/climate.h>
+#include <esphome/components/select/select.h>
 #include <optional>
 #include <map>
 #include <string>
@@ -68,6 +69,7 @@ public:
         }
     }
     void set_charging_limit_number(number::Number* number) { charging_limit_number_ = number; }
+    void set_front_seat_climate_select(select::Select* sel) { front_seat_climate_select_ = sel; }
     
     // ==========================================================================
     // Lock, Cover, and Climate setters
@@ -118,6 +120,7 @@ public:
     void update_charging_control_state(bool charging);
     void update_steering_wheel_heat(bool enabled);
     void update_sentry_mode(bool enabled);
+    void update_front_seat_climate_state(int heater_left, int heater_right, int cooler_left, int cooler_right);
     void republish_charging_amps();
     void republish_charging_limit();
     void update_charger_connected(bool connected);
@@ -169,6 +172,7 @@ private:
     switch_::Switch* steering_wheel_heat_switch_{nullptr};
     number::Number* charging_amps_number_{nullptr};
     number::Number* charging_limit_number_{nullptr};
+    select::Select* front_seat_climate_select_{nullptr};
     
     // ==========================================================================
     // Lock, Cover, and Climate entities

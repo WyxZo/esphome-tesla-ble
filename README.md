@@ -194,6 +194,24 @@ The system only polls infotainment data during an 11-minute wake window, then le
 
 ## Usage
 
+### Front seats and steering wheel heat
+
+`Front Seats` controls both front seats together: `Off`, `Heat 1`–`Heat 3`,
+or `Cool 1`–`Cool 3`. Changing between heat and cooling disables the other
+function first. `Heated Steering` remains an on/off switch.
+
+Selecting seat heat, seat cooling, or steering wheel heat sends Climate On
+without changing the target temperature. The accessory command waits for a
+successful climate-start acknowledgement and subsequent vehicle-reported
+Climate On status. Temperature and the other climate controls remain available.
+Choices made during startup replace the pending seat level and share the same
+climate start. Selecting `Off` does not start or stop the main climate system.
+
+If climate startup fails or is not confirmed within 30 seconds, pending
+accessory requests are cancelled and a warning is logged. Turning climate off
+or losing BLE also cancels pending requests; they are not replayed on reconnect.
+Seat cooling requires a vehicle with ventilated front seats.
+
 ### Finding the BLE MAC
 
 Your vehicle constantly advertises via BLE with a name derived from its VIN (format: `S` + 16 hex chars + `C`). This advertisement comes from VCSEC (vehicle security controller) which is always powered — no need to wake the car. You need the MAC address of that advertisement to configure the ESP32.

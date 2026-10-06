@@ -15,12 +15,14 @@
 #include <esphome/components/lock/lock.h>
 #include <esphome/components/cover/cover.h>
 #include <esphome/components/climate/climate.h>
+#include <esphome/components/select/select.h>
 #include <esphome/core/component.h>
 #include <esphome/core/automation.h>
 #include <esphome/core/preferences.h>
 
 #include "ble_adapter_impl.h"
 #include "control_state_policy.h"
+#include "comfort_climate_policy.h"
 #include "polling_policy.h"
 #include "connection_reset_policy.h"
 #include "storage_adapter_impl.h"
@@ -99,6 +101,7 @@ public:
     void set_sentry_mode_switch(switch_::Switch *sw);
     void set_charging_amps_number(number::Number *number);
     void set_charging_limit_number(number::Number *number);
+    void set_front_seat_climate_select(select::Select *select);
 
     // ==========================================================================
     // Lock, Cover, and Climate setters
@@ -150,6 +153,7 @@ public:
     void set_bioweapon_mode(bool enable);
     void set_preconditioning_max(bool enable);  // Defrost
     void set_steering_wheel_heat(bool enable);
+    void set_front_seat_climate_mode(size_t index);
     
     // Vehicle controls (Infotainment)
     void flash_lights();
@@ -170,6 +174,14 @@ public:
     uint16_t get_write_handle() const { return write_handle_; }
 
 private:
+    ComfortClimatePolicy comfort_climate_policy_;
+    void start_climate_for_comfort_();
+    void cancel_comfort_climate_();
+    void cancel_comfort_climate_timers_();
+    void handle_comfort_climate_state_(bool on);
+    void apply_steering_wheel_heat_(bool enable);
+    void apply_front_seat_climate_mode_(size_t index);
+
     // Initialization helpers
     void initialize_managers();
     void configure_pending_sensors();
@@ -218,6 +230,9 @@ private:
     // Pending numbers
     number::Number *pending_charging_amps_number_{nullptr};
     number::Number *pending_charging_limit_number_{nullptr};
+
+    // Pending combined front-seat climate select
+    select::Select *pending_front_seat_climate_select_{nullptr};
     
     // Pending locks
     lock::Lock *pending_doors_lock_{nullptr};
@@ -314,6 +329,13 @@ protected:
 class TeslaChargingLimitNumber : public WithParent<number::Number> {
 protected:
     void control(float value) override;
+};
+
+class TeslaFrontSeatClimateSelect : public WithParent<select::Select> {
+protected:
+    void control(size_t index) override {
+        if (parent_) parent_->set_front_seat_climate_mode(index);
+    }
 };
 
 // =============================================================================
